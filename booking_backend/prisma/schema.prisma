@@ -1,0 +1,148 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public", "auth"]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  avatar    String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  bookings  Booking[]
+  
+  @@map("users")
+  @@schema("public")
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  capacity    Int
+  facilities  String[]
+  image       String?
+  images      String[] @default([])
+  location    String?
+  floor       String?
+  status      RoomStatus @default(AVAILABLE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  bookings    Booking[]
+  schedules   Schedule[]
+  
+  @@map("rooms")
+  @@schema("public")
+}
+
+model Booking {
+  id                    String        @id @default(uuid())
+  userId                String
+  roomId                String
+  startTime             DateTime
+  endTime               DateTime
+  purpose               String
+  attendees             Int           @default(1)
+  documentUrl           String?
+  documentName          String?
+  approvedDocumentUrl   String?
+  approvedDocumentName  String?
+  status                BookingStatus @default(PENDING)
+  notes                 String?
+  adminNote             String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room                  Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([roomId])
+  @@index([startTime, endTime])
+  @@map("bookings")
+  @@schema("public")
+}
+
+model Schedule {
+  id          String   @id @default(uuid())
+  roomId      String
+  dayOfWeek   Int      // 0-6 (Sunday to Saturday)
+  startTime   String   // Format: "HH:MM"
+  endTime     String   // Format: "HH:MM"
+  isAvailable Boolean  @default(true)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@index([roomId])
+  @@map("schedules")
+  @@schema("public")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  
+  @@index([userId])
+  @@map("notifications")
+  @@schema("public")
+}
+
+enum Role {
+  USER
+  ADMIN
+  
+  @@schema("public")
+}
+
+enum RoomStatus {
+  AVAILABLE
+  MAINTENANCE
+  UNAVAILABLE
+  
+  @@schema("public")
+}
+
+enum BookingStatus {
+  PENDING
+  PROCESSING
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
+  
+  @@schema("public")
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  BOOKING_APPROVED
+  BOOKING_REJECTED
+  BOOKING_REMINDER
+  
+  @@schema("public")
+}
